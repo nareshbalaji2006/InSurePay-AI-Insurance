@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InSurePay – AI Income Shield | Protect Your Delivery Earnings</title>
+  <meta name="description" content="InSurePay AI Income Shield protects food delivery partners from income loss due to rain, heat, and pollution with smart insurance coverage." />
+
+  <!-- Fonts & Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="navbar" id="navbar">
+    <a href="#" class="nav-brand" onclick="navigateTo('register'); return false;">
+      <div class="brand-icon"><i class="fas fa-shield-halved"></i></div>
+      InSure<span class="brand-accent">Pay</span>
+    </a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#dashboard" data-page="dashboard" id="nav-dashboard"><i class="fas fa-grid-2"></i> Dashboard</a></li>
+      <li><a href="#risk" data-page="risk" id="nav-risk"><i class="fas fa-cloud-bolt"></i> Risk Monitor</a></li>
+      <li><a href="#claims" data-page="claims" id="nav-claims"><i class="fas fa-file-invoice-dollar"></i> Claims</a></li>
+    </ul>
+    <div class="nav-user" id="navUser" style="display:none;">
+      <div class="nav-user-avatar" id="userAvatar" title="User Profile"></div>
+    </div>
+  </nav>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ========== REGISTRATION PAGE ========== -->
+  <div class="page active" id="page-register">
+    <div class="container">
+      <div class="register-wrapper">
+        <div class="register-card">
+          <div class="register-header">
+            <div class="register-icon">
+              <i class="fas fa-motorcycle"></i>
+            </div>
+            <h2>Join InSurePay</h2>
+            <p>Protect your daily earnings from weather disruptions</p>
+          </div>
+
+          <form id="registerForm" autocomplete="off">
+            <div class="form-group">
+              <label for="regName"><i class="fas fa-user"></i> Full Name</label>
+              <input type="text" class="form-control" id="regName" placeholder="Enter your full name" required />
+            </div>
+
+            <div class="form-group">
+              <label for="regLocation"><i class="fas fa-map-marker-alt"></i> Location</label>
+              <input type="text" class="form-control" id="regLocation" placeholder="Enter your city" required />
+            </div>
+
+            <div class="form-group">
+              <label for="regPlatform"><i class="fas fa-building"></i> Delivery Platform</label>
+              <select class="form-control" id="regPlatform" required>
+                <option value="" disabled selected>Select your platform</option>
+                <option value="Swiggy">Swiggy</option>
+                <option value="Zomato">Zomato</option>
+              </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="registerBtn">
+              <i class="fas fa-arrow-right"></i> Register & Get Coverage
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== DASHBOARD PAGE ========== -->
+  <div class="page" id="page-dashboard">
+    <div class="container">
+      <!-- Welcome Banner -->
+      <div class="dashboard-header">
+        <div class="dashboard-welcome">
+          <h1 id="dashWelcome">Welcome back, Partner! 👋</h1>
+          <p>Your income is protected by InSurePay AI Shield</p>
+          <div class="welcome-badge">
+            <div class="pulse-dot"></div>
+            Coverage Active
+          </div>
+        </div>
+      </div>
+
+      <!-- Fraud Alert Banner (Hidden initially) -->
+      <div class="fraud-alert-banner hidden" id="fraudAlertBanner">
+        <div class="fraud-icon"><i class="fas fa-triangle-exclamation"></i></div>
+        <div class="fraud-text">
+          <h3 id="fraudAlertTitle">Suspicious Activity Detected</h3>
+          <p id="fraudAlertDesc">Please review recent account history.</p>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fas fa-calendar-week"></i></div>
+          <div class="stat-label">Weekly Premium</div>
+          <div class="stat-value" id="statPremium">₹29</div>
+          <div class="stat-change up"><i class="fas fa-arrow-trend-down"></i> Lowest plan</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green"><i class="fas fa-shield-halved"></i></div>
+          <div class="stat-label">Coverage Amount</div>
+          <div class="stat-value" id="statCoverage">₹5,000</div>
+          <div class="stat-change up"><i class="fas fa-arrow-up"></i> Per week</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon yellow"><i class="fas fa-triangle-exclamation"></i></div>
+          <div class="stat-label">Weather Risk</div>
+          <div class="stat-value" id="statRiskContainer"><span class="risk-badge low" id="riskBadge">Low</span></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green"><i class="fas fa-indian-rupee-sign"></i></div>
+          <div class="stat-label">Earnings Protected</div>
+          <div class="stat-value" id="statEarnings">₹12,400</div>
+          <div class="stat-change up"><i class="fas fa-arrow-up"></i> This month</div>
+        </div>
+        <!-- Trust Score Card -->
+        <div class="stat-card" id="trustScoreCard">
+          <div class="stat-icon green" id="trustIcon"><i class="fas fa-shield"></i></div>
+          <div class="stat-label">Trust Score</div>
+          <div class="stat-value" id="statTrust">--</div>
+          <div class="stat-change" id="trustRiskLevel">Fraud Risk: --</div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="dashboard-actions">
+        <button class="btn btn-primary" id="checkRiskBtn" onclick="checkRisk()">
+          <i class="fas fa-radar"></i> Check Risk
+        </button>
+        <button class="btn btn-outline" onclick="navigateTo('risk')">
+          <i class="fas fa-chart-line"></i> View Risk Monitor
+        </button>
+        <button class="btn btn-green" id="genuineClaimBtn" onclick="simulateGenuineClaim()">
+          <i class="fas fa-check-double"></i> Simulate Genuine Claim
+        </button>
+        <button class="btn btn-danger" id="fraudAttackBtn" onclick="simulateFraudAttack()">
+          <i class="fas fa-biohazard"></i> Simulate Fraud Attack
+        </button>
+      </div>
+
+      <!-- Demo Instant Payout Result (hidden initially) -->
+      <div class="demo-claim-result mt-2 hidden" id="demoClaimResult">
+        <div class="claim-card">
+          <div class="claim-card-top" style="padding: var(--space-lg);">
+            <div class="claim-success-icon" style="width: 50px; height: 50px; font-size: 1.5rem; margin-bottom: var(--space-sm);">🚀</div>
+            <h3 style="font-size: 1.1rem;">Disruption Detected</h3>
+            <div class="claim-amount" id="demoClaimAmount" style="font-size: 2rem;">₹500</div>
+          </div>
+          <div class="claim-card-body" style="padding: var(--space-md) var(--space-xl);">
+            <div class="claim-message" id="demoClaimMessage" style="margin-top: 0;">
+              <i class="fas fa-shield-check"></i> Income protected immediately
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== RISK MONITOR PAGE ========== -->
+  <div class="page" id="page-risk">
+    <div class="container">
+      <div class="risk-section-header">
+        <h2><i class="fas fa-satellite-dish"></i> Real-Time Risk Monitor</h2>
+        <button class="btn btn-outline" onclick="fetchWeather()" id="refreshWeatherBtn">
+          <i class="fas fa-rotate"></i> Refresh Data
+        </button>
+      </div>
+
+      <!-- Risk Status Banner -->
+      <div class="risk-status-banner safe" id="riskBanner">
+        <div class="status-icon">✅</div>
+        <div class="status-text">
+          <h3 id="riskBannerTitle">Safe to Work</h3>
+          <p id="riskBannerDesc">Current conditions are favorable for deliveries</p>
+        </div>
+      </div>
+
+      <!-- Risk Cards -->
+      <div class="risk-grid">
+        <!-- Rain -->
+        <div class="risk-card">
+          <div class="risk-card-header">
+            <div class="rc-icon rain"><i class="fas fa-cloud-rain"></i></div>
+            <div class="rc-label">Rain Probability</div>
+          </div>
+          <div class="risk-value" id="rainValue">--<span>%</span></div>
+          <div class="progress-bar-container">
+            <div class="progress-bar low" id="rainBar" style="width: 0%"></div>
+          </div>
+          <div class="risk-status-label safe" id="rainStatus">Loading...</div>
+        </div>
+
+        <!-- Temperature -->
+        <div class="risk-card">
+          <div class="risk-card-header">
+            <div class="rc-icon temp"><i class="fas fa-temperature-high"></i></div>
+            <div class="rc-label">Temperature</div>
+          </div>
+          <div class="risk-value" id="tempValue">--<span>°C</span></div>
+          <div class="progress-bar-container">
+            <div class="progress-bar low" id="tempBar" style="width: 0%"></div>
+          </div>
+          <div class="risk-status-label safe" id="tempStatus">Loading...</div>
+        </div>
+
+        <!-- AQI -->
+        <div class="risk-card">
+          <div class="risk-card-header">
+            <div class="rc-icon aqi"><i class="fas fa-smog"></i></div>
+            <div class="rc-label">Air Quality Index</div>
+          </div>
+          <div class="risk-value" id="aqiValue">--<span> AQI</span></div>
+          <div class="progress-bar-container">
+            <div class="progress-bar low" id="aqiBar" style="width: 0%"></div>
+          </div>
+          <div class="risk-status-label safe" id="aqiStatus">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== CLAIMS PAGE ========== -->
+  <div class="page" id="page-claims">
+    <div class="container">
+      <div class="risk-section-header">
+        <h2><i class="fas fa-file-invoice-dollar"></i> Claim Center</h2>
+      </div>
+
+      <div class="claim-trigger-section">
+        <p>Simulate extreme weather to trigger an automatic claim</p>
+        <button class="btn btn-rain" id="simulateRainBtn" onclick="simulateClaim()">
+          <i class="fas fa-cloud-showers-heavy"></i> Simulate Heavy Rain 🌧️
+        </button>
+      </div>
+
+      <!-- Verification Step (hidden initially) -->
+      <div class="claim-verification-step hidden" id="claimVerification">
+        <div class="verification-header">
+          <div class="v-spinner"></div>
+          <h3 id="verifHeaderTitle">Verifying Claim...</h3>
+        </div>
+        <div class="verification-checklist">
+          <div class="checklist-item pending" id="checkLocation">
+            <span class="check-icon"><i class="fas fa-spinner fa-spin"></i></span> 
+            <span class="check-text">Location Verified</span>
+          </div>
+          <div class="checklist-item pending" id="checkActivity">
+            <span class="check-icon"><i class="fas fa-spinner fa-spin"></i></span> 
+            <span class="check-text">Delivery Activity Verified</span>
+          </div>
+          <div class="checklist-item pending" id="checkDevice">
+            <span class="check-icon"><i class="fas fa-spinner fa-spin"></i></span> 
+            <span class="check-text">Device Consistency Checked</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Claim Result (hidden initially) -->
+      <div class="claim-result" id="claimResult">
+        <div class="claim-card">
+          <div class="claim-card-top">
+            <div class="claim-success-icon">💰</div>
+            <h3>Claim Approved!</h3>
+            <div class="claim-amount" id="claimAmount">₹500</div>
+          </div>
+          <div class="claim-card-body">
+            <div class="claim-detail-row">
+              <span class="detail-label"><i class="fas fa-circle-check"></i> Status</span>
+              <span class="detail-value status-approved" id="claimStatus">Approved</span>
+            </div>
+            <div class="claim-detail-row">
+              <span class="detail-label"><i class="fas fa-indian-rupee-sign"></i> Amount Credited</span>
+              <span class="detail-value" id="claimAmountDetail">₹500</span>
+            </div>
+            <div class="claim-detail-row">
+              <span class="detail-label"><i class="fas fa-clock"></i> Processed</span>
+              <span class="detail-value" id="claimTime">Just now</span>
+            </div>
+            <div class="claim-detail-row">
+              <span class="detail-label"><i class="fas fa-cloud-rain"></i> Trigger</span>
+              <span class="detail-value">Heavy Rain</span>
+            </div>
+            <div class="claim-message" id="claimMessage">
+              <i class="fas fa-check-circle"></i> ₹500 credited successfully
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confetti container -->
+  <div class="confetti-wrapper" id="confettiWrapper"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
