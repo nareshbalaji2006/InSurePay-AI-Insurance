@@ -4,7 +4,8 @@
    ======================================== */
 
 // ── State ──
-const API_BASE = 'http://localhost:5000';
+const IS_GITHUB_PAGES = window.location.hostname.endsWith('github.io');
+const API_BASE = IS_GITHUB_PAGES ? '' : 'http://localhost:5000';
 let currentUser = null;
 let currentPage = 'register';
 let autoClaimInFlight = false;
@@ -16,6 +17,7 @@ const LAST_CLAIM_STORAGE_KEY = 'insurepay_last_claim';
 document.addEventListener('DOMContentLoaded', () => {
   updateAnalytics();
   hydrateClaimHistory();
+  applyHostedDemoMode();
 
   // Check for existing registration
   const saved = localStorage.getItem('insurepay_user');
@@ -50,6 +52,22 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 10);
   });
 });
+
+function applyHostedDemoMode() {
+  if (!IS_GITHUB_PAGES) return;
+
+  const dashSubtext = document.getElementById('dashSubtext');
+  if (dashSubtext) {
+    dashSubtext.textContent = 'Running in interactive demo mode on GitHub Pages.';
+  }
+
+  const badgeText = document.getElementById('welcomeBadgeText');
+  if (badgeText) {
+    badgeText.textContent = 'Demo Mode Active';
+  }
+
+  showToast('GitHub Pages demo mode active. Backend calls are simulated.', 'info');
+}
 
 // ── Navigation ──
 function navigateTo(page) {
@@ -102,6 +120,18 @@ async function handleRegister(e) {
   const btn = document.getElementById('registerBtn');
   btn.classList.add('btn-loading');
   btn.innerHTML = '<div class="btn-spinner"></div> Registering...';
+
+  if (IS_GITHUB_PAGES) {
+    currentUser = { name, location, platform, premium: 29, coverage: 5000 };
+    localStorage.setItem('insurepay_user', JSON.stringify(currentUser));
+    updateUserPremium(currentUser.premium);
+    showToast('Registered successfully! GitHub Pages demo mode enabled.', 'success');
+    showLoggedInState();
+    navigateTo('dashboard');
+    btn.classList.remove('btn-loading');
+    btn.innerHTML = '<i class="fas fa-arrow-right"></i> Register & Get Coverage';
+    return;
+  }
 
   try {
     const response = await fetch(`${API_BASE}/register`, {
@@ -248,6 +278,18 @@ async function checkRisk() {
   btn.classList.add('btn-loading');
   btn.innerHTML = '<div class="btn-spinner"></div> Checking...';
 
+  if (IS_GITHUB_PAGES) {
+    const levels = ['Low', 'Medium', 'High'];
+    const randomRisk = levels[Math.floor(Math.random() * levels.length)];
+    updateRiskBadge(randomRisk);
+    updateTrustScore(Math.floor(Math.random() * 40 + 60), randomRisk);
+    simulateFraudBanner();
+    showToast(`Risk level: ${randomRisk} (demo mode)`, 'info');
+    btn.classList.remove('btn-loading');
+    btn.innerHTML = '<i class="fas fa-radar"></i> Check Risk';
+    return;
+  }
+
   try {
     const response = await fetch(`${API_BASE}/risk`);
     if (!response.ok) throw new Error('Failed to fetch risk');
@@ -369,6 +411,24 @@ async function fetchWeather() {
     btn.innerHTML = '<div class="btn-spinner"></div> Loading...';
   }
 
+  if (IS_GITHUB_PAGES) {
+    const simulated = {
+      rain: Math.floor(Math.random() * 100),
+      temperature: Math.floor(25 + Math.random() * 20),
+      aqi: Math.floor(50 + Math.random() * 300),
+      trigger_status: false,
+      trigger_type: null
+    };
+    simulated.message = '\u20B9500 credited successfully';
+    updateWeatherUI(simulated);
+    if (btn) {
+      btn.classList.remove('btn-loading');
+      btn.innerHTML = '<i class="fas fa-rotate"></i> Refresh Data';
+    }
+    showToast('Weather data simulated for GitHub Pages demo.', 'info');
+    return;
+  }
+
   try {
     const response = await fetch(`${API_BASE}/weather`);
     if (!response.ok) throw new Error('Failed to fetch weather');
@@ -483,6 +543,20 @@ async function simulateClaim() {
   // Hide any existing result
   document.getElementById('claimResult').classList.remove('show');
 
+  if (IS_GITHUB_PAGES) {
+    const simulated = {
+      status: 'Approved',
+      amount: 500,
+      message: '\u20B9500 credited successfully',
+      fraud_risk: 'Low'
+    };
+    await simulateVerificationSteps('Low');
+    showClaimResult(simulated);
+    btn.classList.remove('btn-loading');
+    btn.innerHTML = '<i class="fas fa-cloud-showers-heavy"></i> Simulate Heavy Rain';
+    return;
+  }
+
   try {
     const response = await fetch(`${API_BASE}/claim`);
     if (!response.ok) throw new Error('Claim failed');
@@ -519,6 +593,28 @@ async function processClaim(triggerType, options = {}) {
   }
 
   document.getElementById('claimResult').classList.remove('show');
+
+  if (IS_GITHUB_PAGES) {
+    const simulated = {
+      status: 'Approved',
+      amount: 500,
+      message: '\u20B9500 credited successfully',
+      fraud_risk: 'Low',
+      trigger: triggerType
+    };
+    await simulateVerificationSteps('Low');
+    showClaimResult(simulated);
+
+    if (isAutomatic) {
+      showToast(`Auto-claim simulated for ${triggerType}`, 'info');
+    }
+
+    if (button) {
+      button.classList.remove('btn-loading');
+      button.innerHTML = '<i class="fas fa-cloud-showers-heavy"></i> Simulate Heavy Rain';
+    }
+    return;
+  }
 
   try {
     const response = await fetch(`${API_BASE}/claim?trigger_type=${encodeURIComponent(triggerType)}`);
