@@ -7,9 +7,16 @@
 const API_BASE = 'http://localhost:5000';
 let currentUser = null;
 let currentPage = 'register';
+let autoClaimInFlight = false;
+let lastAutoClaimKey = null;
+const CLAIMS_STORAGE_KEY = 'insurepay_total_claims';
+const LAST_CLAIM_STORAGE_KEY = 'insurepay_last_claim';
 
 // ── Initialization ──
 document.addEventListener('DOMContentLoaded', () => {
+  updateAnalytics();
+  hydrateClaimHistory();
+
   // Check for existing registration
   const saved = localStorage.getItem('insurepay_user');
   if (saved) {
@@ -72,6 +79,11 @@ function navigateTo(page) {
   if (page === 'risk') {
     fetchWeather();
   }
+
+  // Populate profile if navigating to profile
+  if (page === 'profile') {
+    populateProfile();
+  }
 }
 
 // ── Registration ──
@@ -103,6 +115,7 @@ async function handleRegister(e) {
     const data = await response.json();
     currentUser = { name, location, platform, ...data };
     localStorage.setItem('insurepay_user', JSON.stringify(currentUser));
+    updateUserPremium(data.premium);
     showToast('Registration successful! Welcome to InSurePay 🎉', 'success');
     showLoggedInState();
     navigateTo('dashboard');
@@ -135,7 +148,101 @@ function showLoggedInState() {
   document.getElementById('dashWelcome').textContent = `Welcome back, ${firstName}! 👋`;
 }
 
+function populateProfile() {
+  if (!currentUser) return;
+
+  const initials = currentUser.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  
+  document.getElementById('profileAvatarLG').textContent = initials;
+  document.getElementById('profileName').textContent = currentUser.name;
+  
+  const platformBadge = document.getElementById('profilePlatform');
+  platformBadge.innerHTML = `<i class="fas fa-building"></i> ${currentUser.platform}`;
+  
+  document.getElementById('profileLocation').textContent = currentUser.location;
+  
+  // Format joining date if available
+  const dateStr = currentUser.registered_at ? new Date(currentUser.registered_at).toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Today';
+  document.getElementById('profileJoined').textContent = dateStr;
+  
+  document.getElementById('profileId').textContent = currentUser.user_id ? `ISP-${currentUser.user_id.toString().padStart(5, '0')}` : 'ISP-00001';
+  document.getElementById('profilePremium').textContent = currentUser.premium || '20';
+  document.getElementById('profileCoverage').textContent = currentUser.coverage ? currentUser.coverage.toLocaleString() : '5,000';
+}
+
+function updateUserPremium(premium) {
+  if (!currentUser || premium == null) return;
+
+  currentUser.premium = premium;
+  localStorage.setItem('insurepay_user', JSON.stringify(currentUser));
+
+  const premiumEl = document.getElementById('profilePremium');
+  if (premiumEl) {
+    premiumEl.textContent = premium;
+  }
+
+  const statPremium = document.getElementById('statPremium');
+  if (statPremium) {
+    statPremium.textContent = `₹${premium}`;
+  }
+}
+
+function updateAnalytics(claimIncrement = 0) {
+  let totalClaims = Number(localStorage.getItem(CLAIMS_STORAGE_KEY));
+
+  if (!Number.isFinite(totalClaims) || totalClaims < 0) {
+    totalClaims = Math.floor(Math.random() * 6) + 3;
+  }
+
+  totalClaims += claimIncrement;
+  localStorage.setItem(CLAIMS_STORAGE_KEY, String(totalClaims));
+
+  const claimsEl = document.getElementById('statClaims');
+  if (claimsEl) {
+    claimsEl.textContent = totalClaims;
+  }
+
+  const earningsEl = document.getElementById('statEarnings');
+  if (earningsEl) {
+    earningsEl.textContent = `₹${(totalClaims * 500).toLocaleString('en-IN')}`;
+  }
+}
+
 // ── Check Risk (Dashboard) ──
+function hydrateClaimHistory() {
+  const savedClaim = localStorage.getItem(LAST_CLAIM_STORAGE_KEY);
+  if (!savedClaim) return;
+
+  try {
+    const { amount, trigger } = JSON.parse(savedClaim);
+    updateClaimHistory(amount, trigger, false);
+  } catch (err) {
+    localStorage.removeItem(LAST_CLAIM_STORAGE_KEY);
+  }
+}
+
+function formatClaimTrigger(trigger) {
+  if (!trigger) return 'Rain';
+  if (trigger.includes('Rain')) return 'Rain';
+  if (trigger.includes('Heat')) return 'Heat';
+  if (trigger.includes('AQI') || trigger.includes('Air')) return 'AQI';
+
+  return trigger.replace(' Detected', '').trim();
+}
+
+function updateClaimHistory(amount, trigger, persist = true) {
+  const lastClaimEl = document.getElementById('lastClaim');
+  const formattedTrigger = formatClaimTrigger(trigger);
+
+  if (lastClaimEl) {
+    lastClaimEl.textContent = `₹${amount} - ${formattedTrigger}`;
+  }
+
+  if (persist) {
+    localStorage.setItem(LAST_CLAIM_STORAGE_KEY, JSON.stringify({ amount, trigger }));
+  }
+}
+
 async function checkRisk() {
   const btn = document.getElementById('checkRiskBtn');
   btn.classList.add('btn-loading');
@@ -147,6 +254,7 @@ async function checkRisk() {
 
     const data = await response.json();
     updateRiskBadge(data.risk_level || data.risk || 'Low');
+    updateUserPremium(data.premium);
     showToast(`Risk level updated: ${data.risk_level || data.risk || 'Low'}`, 'success');
     
     if (data.trust_score) {
@@ -235,9 +343,27 @@ function updateRiskBadge(level) {
   }
 }
 
+function getTriggerDisplay(triggerType) {
+  const triggerMap = {
+    Rain: 'Rain Disruption Detected',
+    Heat: 'Extreme Heat Alert',
+    AQI: 'Hazardous Air Quality'
+  };
+
+  if (!triggerType) {
+    return 'Current conditions are favorable for deliveries';
+  }
+
+  return triggerType
+    .split(' / ')
+    .map(type => triggerMap[type] || `${type} Disruption Detected`)
+    .join(' and ');
+}
+
 // ── Weather / Risk Monitor ──
 async function fetchWeather() {
   const btn = document.getElementById('refreshWeatherBtn');
+  const button = null;
   if (btn) {
     btn.classList.add('btn-loading');
     btn.innerHTML = '<div class="btn-spinner"></div> Loading...';
@@ -249,18 +375,31 @@ async function fetchWeather() {
 
     const data = await response.json();
     updateWeatherUI(data);
+    updateUserPremium(data.premium);
+
+    if (data.trigger_status) {
+      await simulateClaim(data.trigger_type, true, data.timestamp);
+    } else {
+      lastAutoClaimKey = null;
+    }
   } catch (err) {
     // Fallback: use simulated data
     const simulated = {
       rain: Math.floor(Math.random() * 100),
       temperature: Math.floor(25 + Math.random() * 20),
-      aqi: Math.floor(50 + Math.random() * 300)
+      aqi: Math.floor(50 + Math.random() * 300),
+      trigger_status: false,
+      trigger_type: null
     };
+    simulated.message = '₹500 credited successfully';
     updateWeatherUI(simulated);
   } finally {
     if (btn) {
       btn.classList.remove('btn-loading');
       btn.innerHTML = '<i class="fas fa-rotate"></i> Refresh Data';
+    }
+    if (button) {
+      button.innerHTML = '<i class="fas fa-cloud-showers-heavy"></i> Simulate Heavy Rain 🌧️';
     }
   }
 }
@@ -299,12 +438,18 @@ function updateWeatherUI(data) {
   aqiStatus.className = `risk-status-label ${getStatusClass(aqi, [100, 200], true)}`;
 
   // Update banner
-  const isHighRisk = rain > 70 || temp > 42 || aqi > 200;
+  const isHighRisk = Boolean(data.trigger_status ?? (rain > 70 || temp > 42 || aqi > 200));
+  const triggerMessage = getTriggerDisplay(data.trigger_type);
   const banner = document.getElementById('riskBanner');
   banner.className = `risk-status-banner ${isHighRisk ? 'danger' : 'safe'}`;
   document.getElementById('riskBannerTitle').textContent = isHighRisk ? 'High Risk Today ⚠️' : 'Safe to Work ✅';
   document.getElementById('riskBannerDesc').textContent = isHighRisk
     ? 'Conditions may disrupt deliveries. Coverage is active.'
+    : 'Current conditions are favorable for deliveries';
+
+  document.getElementById('riskBannerTitle').textContent = isHighRisk ? triggerMessage : 'Safe to Work';
+  document.getElementById('riskBannerDesc').textContent = isHighRisk
+    ? `${triggerMessage}. Coverage is active and auto-claim monitoring is enabled.`
     : 'Current conditions are favorable for deliveries';
 
   // Re-trigger card animations
@@ -356,6 +501,7 @@ async function simulateClaim() {
       message: '₹500 credited successfully',
       fraud_risk: 'Low'
     };
+    simulated.message = '₹500 credited successfully';
     await simulateVerificationSteps('Low');
     showClaimResult(simulated);
   } finally {
@@ -363,6 +509,77 @@ async function simulateClaim() {
     btn.innerHTML = '<i class="fas fa-cloud-showers-heavy"></i> Simulate Heavy Rain 🌧️';
   }
 }
+
+async function processClaim(triggerType, options = {}) {
+  const { button = null, isAutomatic = false } = options;
+
+  if (button) {
+    button.classList.add('btn-loading');
+    button.innerHTML = '<div class="btn-spinner"></div> Processing Claim...';
+  }
+
+  document.getElementById('claimResult').classList.remove('show');
+
+  try {
+    const response = await fetch(`${API_BASE}/claim?trigger_type=${encodeURIComponent(triggerType)}`);
+    if (!response.ok) throw new Error('Claim failed');
+
+    const data = await response.json();
+    await simulateVerificationSteps(data.fraud_risk || 'Low');
+    showClaimResult(data);
+
+    if (isAutomatic) {
+      showToast(`Auto claim triggered due to ${triggerType} ⚡`, 'info');
+    }
+  } catch (err) {
+    const simulated = {
+      status: 'Approved',
+      amount: 500,
+      message: 'â‚¹500 credited successfully',
+      fraud_risk: 'Low',
+      trigger: triggerType
+    };
+    await simulateVerificationSteps('Low');
+    showClaimResult(simulated);
+
+    if (isAutomatic) {
+      showToast(`Auto-claim simulated for ${triggerType}`, 'warning');
+    }
+  } finally {
+    if (button) {
+      button.classList.remove('btn-loading');
+      button.innerHTML = '<i class="fas fa-cloud-showers-heavy"></i> Simulate Heavy Rain 🌧️';
+      button.innerHTML = '<i class="fas fa-cloud-showers-heavy"></i> Simulate Heavy Rain 🌧️';
+      button.innerHTML = '<i class="fas fa-cloud-showers-heavy"></i> Simulate Heavy Rain ðŸŒ§ï¸';
+    }
+  }
+}
+
+async function simulateClaim(triggerType = 'Heavy Rain Detected', isAutomatic = false, triggerTimestamp = null) {
+  const triggerKey = `${triggerTimestamp || Date.now()}-${triggerType}`;
+  if (isAutomatic) {
+    if (autoClaimInFlight || lastAutoClaimKey === triggerKey) {
+      return;
+    }
+    autoClaimInFlight = true;
+    lastAutoClaimKey = triggerKey;
+  }
+
+  const btn = isAutomatic ? null : document.getElementById('simulateRainBtn');
+
+  try {
+    await processClaim(triggerType, { button: btn, isAutomatic });
+    if (btn) {
+      btn.innerHTML = '<i class="fas fa-cloud-showers-heavy"></i> Simulate Heavy Rain 🌧️';
+    }
+  } finally {
+    if (isAutomatic) {
+      autoClaimInFlight = false;
+    }
+  }
+}
+
+/* Legacy manual claim flow kept above for compatibility during migration. */
 
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -415,12 +632,17 @@ async function simulateVerificationSteps(fraudRisk) {
 }
 
 function showClaimResult(data) {
+  const trigger = data.trigger || 'Heavy Rain Detected';
   const amount = data.amount || data.claim_amount || 500;
   const status = data.status || data.claim_status || 'Approved';
   const message = data.message || `₹${amount} credited successfully`;
 
+  updateAnalytics(1);
+
   document.getElementById('claimAmount').textContent = `₹${amount}`;
   
+  document.getElementById('claimAmount').textContent = `₹${amount}`;
+
   const statusEl = document.getElementById('claimStatus');
   statusEl.textContent = status;
   statusEl.className = 'detail-value'; // Reset
@@ -441,8 +663,16 @@ function showClaimResult(data) {
 
   document.getElementById('claimAmountDetail').textContent = `₹${amount}`;
   
+  document.getElementById('claimAmountDetail').textContent = `₹${amount}`;
+
+  const triggerEl = document.getElementById('claimTriggerType');
+  if (triggerEl) {
+    triggerEl.textContent = trigger;
+  }
+
   const messageEl = document.getElementById('claimMessage');
   if (status === 'Approved') {
+    updateClaimHistory(amount, trigger);
     messageEl.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
     messageEl.style.background = 'var(--green-50)';
     messageEl.style.color = 'var(--green-700)';
@@ -637,4 +867,20 @@ function showToast(message, type = 'info') {
     toast.style.animation = 'toastOut 0.4s ease forwards';
     setTimeout(() => toast.remove(), 400);
   }, 3500);
+}
+
+// ── Logout ──
+function logout() {
+  localStorage.removeItem('insurepay_user');
+  currentUser = null;
+  
+  // Hide nav links and user avatar
+  const navLinks = document.getElementById('navLinks');
+  const navUser = document.getElementById('navUser');
+  if (navLinks) navLinks.style.display = 'none';
+  if (navUser) navUser.style.display = 'none';
+  
+  // Go back to register
+  navigateTo('register');
+  showToast('Logged out successfully', 'info');
 }

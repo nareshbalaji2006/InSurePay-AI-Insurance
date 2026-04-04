@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>InSurePay – AI Income Shield | Protect Your Delivery Earnings</title>
-  <meta name="description" content="InSurePay AI Income Shield protects food delivery partners from income loss due to rain, heat, and pollution with smart insurance coverage." />
+  <meta name="description" content="InSurePay is an AI-powered, fraud-resilient income protection system built for real-world deployment with trust-based validation and zero-touch payouts." />
 
   <!-- Fonts & Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
@@ -24,7 +24,10 @@
       <li><a href="#claims" data-page="claims" id="nav-claims"><i class="fas fa-file-invoice-dollar"></i> Claims</a></li>
     </ul>
     <div class="nav-user" id="navUser" style="display:none;">
-      <div class="nav-user-avatar" id="userAvatar" title="User Profile"></div>
+      <div class="nav-user-avatar" id="userAvatar" title="User Profile" onclick="navigateTo('profile')"></div>
+      <button class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; border-color: var(--danger); color: var(--danger);" onclick="logout()">
+        <i class="fas fa-sign-out-alt"></i> Logout
+      </button>
     </div>
   </nav>
 
@@ -41,7 +44,7 @@
               <i class="fas fa-motorcycle"></i>
             </div>
             <h2>Join InSurePay</h2>
-            <p>Protect your daily earnings from weather disruptions</p>
+            <p>Existing systems fail in real-world deployment due to fraud, fake claims, and lack of trust validation.</p>
           </div>
 
           <form id="registerForm" autocomplete="off">
@@ -122,12 +125,56 @@
           <div class="stat-value" id="statEarnings">₹12,400</div>
           <div class="stat-change up"><i class="fas fa-arrow-up"></i> This month</div>
         </div>
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fas fa-file-invoice-dollar"></i></div>
+          <div class="stat-label">Total Claims</div>
+          <div class="stat-value" id="statClaims">0</div>
+          <div class="stat-change up"><i class="fas fa-sparkles"></i> AI assisted</div>
+        </div>
         <!-- Trust Score Card -->
         <div class="stat-card" id="trustScoreCard">
           <div class="stat-icon green" id="trustIcon"><i class="fas fa-shield"></i></div>
           <div class="stat-label">Trust Score</div>
           <div class="stat-value" id="statTrust">--</div>
           <div class="stat-change" id="trustRiskLevel">Fraud Risk: --</div>
+          <div class="trust-score-explainer">
+            <div class="trust-score-title">Trust Score is calculated based on:</div>
+            <div class="trust-score-list">
+              <span>Movement consistency</span>
+              <span>Claim behavior</span>
+              <span>Device signals</span>
+            </div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fas fa-clock-rotate-left"></i></div>
+          <div class="stat-label">Last Claim</div>
+          <div class="stat-value" id="lastClaim">₹500 - Rain</div>
+          <div class="stat-change up"><i class="fas fa-bolt"></i> Auto-updated</div>
+        </div>
+      </div>
+
+      <div class="dashboard-section-intro">
+        <h3>Why InSurePay is Different</h3>
+      </div>
+      <div class="stats-grid why-different-grid">
+        <div class="stat-card">
+          <div class="stat-icon red"><i class="fas fa-user-shield"></i></div>
+          <div class="stat-label">Differentiation</div>
+          <div class="stat-value stat-value-sm">Fraud-aware claim system</div>
+          <div class="stat-change up"><i class="fas fa-shield-virus"></i> Built for real-world abuse</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon green"><i class="fas fa-fingerprint"></i></div>
+          <div class="stat-label">Differentiation</div>
+          <div class="stat-value stat-value-sm">Trust-based validation</div>
+          <div class="stat-change up"><i class="fas fa-badge-check"></i> Signals over guesswork</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon blue"><i class="fas fa-money-bill-transfer"></i></div>
+          <div class="stat-label">Differentiation</div>
+          <div class="stat-value stat-value-sm">Zero-touch automated payouts</div>
+          <div class="stat-change up"><i class="fas fa-sparkles"></i> Instant protection flow</div>
         </div>
       </div>
 
@@ -287,10 +334,76 @@
             </div>
             <div class="claim-detail-row">
               <span class="detail-label"><i class="fas fa-cloud-rain"></i> Trigger</span>
-              <span class="detail-value">Heavy Rain</span>
+              <span class="detail-value" id="claimTriggerType">Heavy Rain</span>
             </div>
+            <div class="ai-decision-label">🤖 Triggered by AI Risk Engine</div>
             <div class="claim-message" id="claimMessage">
               <i class="fas fa-check-circle"></i> ₹500 credited successfully
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== PROFILE PAGE ========== -->
+  <div class="page" id="page-profile">
+    <div class="container">
+      <div class="profile-header-card">
+        <div class="profile-avatar-large" id="profileAvatarLG"></div>
+        <div class="profile-info">
+          <h2 id="profileName">--</h2>
+          <div class="profile-badges">
+            <span class="badge" id="profilePlatform"><i class="fas fa-building"></i> --</span>
+            <span class="badge"><i class="fas fa-map-marker-alt"></i> <span id="profileLocation">--</span></span>
+            <span class="badge success"><i class="fas fa-shield-check"></i> Active Coverage</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-grid">
+        <!-- Account Details -->
+        <div class="profile-card">
+          <div class="card-header">
+            <h3><i class="fas fa-user-circle"></i> Account Details</h3>
+          </div>
+          <div class="card-body">
+            <div class="detail-row">
+              <span class="detail-label">Member Since</span>
+              <span class="detail-value" id="profileJoined">--</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">User ID</span>
+              <span class="detail-value" id="profileId">--</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Phone Number</span>
+              <span class="detail-value">+91 ** *** ****</span>
+            </div>
+            <div class="detail-row">
+              <span class="detail-label">Vehicle</span>
+              <span class="detail-value">Two Wheeler</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Insurance Plan -->
+        <div class="profile-card">
+          <div class="card-header">
+            <h3><i class="fas fa-shield-halved"></i> Current Plan</h3>
+          </div>
+          <div class="card-body">
+            <div class="plan-summary">
+              <div class="plan-hero">
+                <h4>AI Income Shield</h4>
+                <div class="plan-price">₹<span id="profilePremium">--</span><span class="period">/week</span></div>
+              </div>
+              <ul class="plan-features">
+                <li><i class="fas fa-check" style="color:var(--green-500);"></i> Up to ₹<span id="profileCoverage">--</span> per week</li>
+                <li><i class="fas fa-check" style="color:var(--green-500);"></i> Heavy rain & extreme heat protection</li>
+                <li><i class="fas fa-check" style="color:var(--green-500);"></i> Instant AI claim settlement</li>
+              </ul>
+              <button class="btn btn-outline" style="width:100%; margin-top:1rem;">Upgrade Plan</button>
             </div>
           </div>
         </div>
